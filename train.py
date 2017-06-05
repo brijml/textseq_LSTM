@@ -1,5 +1,6 @@
 import numpy as np
 from lib import *
+import sys
 
 def one_hot(char):
 	vector = np.zeros((len_input,1))
@@ -7,26 +8,27 @@ def one_hot(char):
 	vector[index] = 1
 	return vector
 
-def sample(x,h,len_text):
-	lstm = LSTM(len_input,len(h),len_text,h)
-	output = Softmax(len_input,len(h),len_text)
+def sample(x,len_text):
 
 	ixes = []
 	x = one_hot(x)
 	for i in range(len_text):
-		lstm_out = lstm.forward(x)
+		lstm_out = layer.forward(x)
 		p = output.forward(lstm_out)
 		ix = np.random.choice(range(len_input), p=p.ravel())
 		x = one_hot(unq_chars[ix])
 		ixes.append(ix)
-
-	del lstm,output
+	
+	layer.reset()
+	output.reset()
+	# print p
 	return ixes
 
 
 def train(data):
+	global layer,output
 	#hyperparameters
-	learning_rate = 1e-3
+	learning_rate = 1e-5
 	hidden_nodes = 100
 	seq_length = 25
 	
@@ -36,35 +38,44 @@ def train(data):
 	layer = LSTM(len_input,hidden_nodes,seq_length,h_init)
 	output = Softmax(len_input,hidden_nodes, seq_length)
 	cnt = 1
-	for i in range(0,len(data),seq_length):
-		
-		x,target = [],[]
-		for j,char in enumerate(data[i:i+seq_length]):
-			x = one_hot(char)
-			target = one_hot(data[j+1])
 
-			#Forward pass
-			lstm_out = layer.forward(x)
-			softmax_out = output.forward(lstm_out)
+	while True:
+		for i in range(0,len(data)-seq_length-1,seq_length):
+			
+			# if cnt>4:
+			# 	break
+			x,target = [],[]
+			for j,char in enumerate(data[i:i+seq_length]):
+				x = one_hot(char)
+				target = one_hot(data[j+1])
 
-		#Backward pass
-		grad_softmax = output.backward(target)
-		grad_lstm = layer.backward(grad_softmax)
+				#Forward pass
+				lstm_out = layer.forward(x)
+				softmax_out = output.forward(lstm_out)
 
-		#Update
-		layer.update(learning_rate)
-		output.update(learning_rate)
+			#Backward pass
+			grad_softmax = output.backward(target)
+			grad_lstm = layer.backward(grad_softmax)
 
-		#Sample text every now and then to see what lstm is learning
-		if cnt%1000 == 0:
-			indices = sample(data[0],lstm_out,200)
-			text = ""
-			for idx in indices:
-				text = text + unq_chars[idx]
+			#Update
+			layer.update(learning_rate)
+			output.update(learning_rate)
 
-			print '-------\n',text,'\n-------'
+			layer.reset()
+			output.reset()
 
-		cnt+=1 #iteration counter 	
+			#Sample text every now and then to see what lstm is learning
+			if cnt%1000 == 0:
+				# print sys.getsizeof(layer),sys.getsizeof(output)
+				# print len(layer.h.keys())
+				indices = sample(data[0],200)
+				text = ""
+				for idx in indices:
+					text = text + unq_chars[idx]
+
+				print '-------\n',text,'\n-------'
+
+			cnt+=1 #iteration counter 	
 
 if __name__ == '__main__':
 	data = load_data()

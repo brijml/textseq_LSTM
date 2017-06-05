@@ -43,6 +43,7 @@ class LSTM(object):
 
 	def forward(self,x):
 
+		# print self.j
 		self.input_[self.j] = np.concatenate((x,self.h[self.j-1]),axis = 0)
 
 		#Equations for a single time step of LSTM
@@ -85,16 +86,23 @@ class LSTM(object):
 			dhnext += dinput[self.len_vec:]
 			self.dweights += np.matmul(dinput,dz.T)
 
+		# self.j = 0
 		return dh
 
 	def update(self,learning_rate):
 		#Adagrad update
+		# print (learning_rate * self.dweights)/np.sqrt(self.cache + 1e-7)
+		# thaha = raw_input()
 		self.cache += np.power(self.dweights,2)
 		self.weights_concatenated -= (learning_rate * self.dweights)/np.sqrt(self.cache + 1e-7)
 		self.Wc = self.weights_concatenated[:,0:100]
 		self.Wf = self.weights_concatenated[:,100:200]
 		self.Wi = self.weights_concatenated[:,200:300]
 		self.Wo = self.weights_concatenated[:,300:400]
+		return
+	
+	def reset(self):
+		self.j = 0
 		return
 
 class Softmax(object):
@@ -123,6 +131,7 @@ class Softmax(object):
 			self.error_derivatives_w += np.matmul(self.activations_LSTM[t],error_derivatives_ISM.T)
 			self.delta_h[t] = np.matmul(self.weights,error_derivatives_ISM)
 
+		# self.t = 0
 		return self.delta_h
 
 	def update(self,learning_rate):
@@ -131,4 +140,8 @@ class Softmax(object):
 		self.cache += np.power(self.error_derivatives_w,2)
 		self.weights -= (learning_rate * self.error_derivatives_w)/np.sqrt(self.cache + 1e-7)
 	
+		return
+
+	def reset(self):
+		self.t = 0
 		return
