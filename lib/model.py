@@ -25,11 +25,10 @@ def deriv_sigmoid(val,non_linearity):
 
 class LSTM(object):
 	"""docstring for LSTM"""
-	def __init__(self, len_vec, hidden_units, steps):
+	def __init__(self, len_vec, hidden_units, steps, h_init):
 		super(LSTM, self).__init__()
 		self.input_,self.a,self.i,self.f,self.o,self.h,self.C,self.z = {},{},{},{},{},{},{},{}
-		# self.dinput,self.da,self.di,self.df,self.do,self.dh,self.dC,self.dz = {},{},{},{},{},{},{},{}
-		self.h[-1] = np.zeros((hidden_units,1))
+		self.h[-1] = h_init
 		self.Wf,self.bf = initialise_parameters(hidden_units+len_vec,hidden_units)
 		self.Wi,self.bi = initialise_parameters(hidden_units+len_vec,hidden_units)
 		self.Wc,self.bc = initialise_parameters(hidden_units+len_vec,hidden_units)
@@ -39,35 +38,36 @@ class LSTM(object):
 		self.len_vec = len_vec
 		self.hidden_units = hidden_units
 		self.dweights = np.zeros((hidden_units+len_vec,4*hidden_units))
+		self.j,self.cache = 0,0
 		return
 
 	def forward(self,x):
 
-		for j in range(self.steps):
-			self.input_[j] = np.concatenate((x[j],self.h[j-1]),axis = 0)
+		self.input_[self.j] = np.concatenate((x,self.h[self.j-1]),axis = 0)
 
-			#Equations for a single time step of LSTM
-			self.f[j] = sigmoid(np.matmul(self.Wf.T,self.input_[j]),'logit')
-			self.i[j] = sigmoid(np.matmul(self.Wi.T,self.input_[j]),'logit')
-			self.a[j] = sigmoid(np.matmul(self.Wc.T,self.input_[j]),'tanh')
-			self.C[j] = self.f[j]*self.C[j-1] + self.i[j]*self.a[j]  #element-wise multiplication
-			self.o[j] = sigmoid(np.matmul(self.Wo.T,self.input_[j]),'logit')
-			self.h[j] = self.o[j] * sigmoid(self.C[j],'tanh')
-			
-			#concatenate all the gates and weights for simplicity in calculation of the weight updates
-			self.weights_concatenated = np.concatenate((self.Wc,self.Wi,self.Wf,self.Wo),axis = 1)
-			self.z = np.matmul(self.weights_concatenated.T,self.input_[j])
+		#Equations for a single time step of LSTM
+		self.f[self.j] = sigmoid(np.matmul(self.Wf.T,self.input_[self.j]),'logit')
+		self.i[self.j] = sigmoid(np.matmul(self.Wi.T,self.input_[self.j]),'logit')
+		self.a[self.j] = sigmoid(np.matmul(self.Wc.T,self.input_[self.j]),'tanh')
+		self.C[self.j] = self.f[self.j]*self.C[self.j-1] + self.i[self.j]*self.a[self.j]  #element-wise multiplication
+		self.o[self.j] = sigmoid(np.matmul(self.Wo.T,self.input_[self.j]),'logit')
+		self.h[self.j] = self.o[self.j] * sigmoid(self.C[self.j],'tanh')
+	
+		#concatenate all the gates and weights for simplicity in calculation of the weight updates
+		self.weights_concatenated = np.concatenate((self.Wc,self.Wi,self.Wf,self.Wo),axis = 1)
+		self.z = np.matmul(self.weights_concatenated.T,self.input_[self.j])
 
-		out = self.h
-		self.h[-1] = self.h[j]
-		self.C[-1] = self.C[j]
+		out = self.h[self.j]
+		self.h[-1] = self.h[self.j]
+		self.C[-1] = self.C[self.j]
+		self.j+=1
 		return out
 
 	def backward(self,d_above):
 		
 		dhnext = np.zeros_like(self.h[0])
 		dc = np.zeros_like(self.C[0])
-		# self.dc[self.steps],self.dh[self.steps] = dc,dh
+
 		for t in reversed(xrange(self.steps)):
 			dh = d_above[t] + dhnext
 			do = dh*sigmoid(self.C[t],'tanh')
@@ -80,16 +80,22 @@ class LSTM(object):
 			di_bar = di * deriv_sigmoid(self.i[t],'logit') 
 			do_bar = do * deriv_sigmoid(self.o[t],'logit')
 			da_bar = da * deriv_sigmoid(self.a[t],'tanh')
-			dz = np.concatenate((df_bar,di_bar,do_bar,da_bar),axis = 0)
+			dz = np.concatenate((da_bar,di_bar,df_bar,do_bar),axis = 0)
 			dinput = np.matmul(self.weights_concatenated,dz)
 			dhnext += dinput[self.len_vec:]
 			self.dweights += np.matmul(dinput,dz.T)
 
 		return dh
 
-	def update(self):
+	def update(self,learning_rate):
 		#Adagrad update
-		pass
+		self.cache += np.power(self.dweights,2)
+		self.weights_concatenated -= (learning_rate * self.dweights)/np.sqrt(self.cache + 1e-7)
+		self.Wc = self.weights_concatenated[:,0:100]
+		self.Wf = self.weights_concatenated[:,100:200]
+		self.Wi = self.weights_concatenated[:,200:300]
+		self.Wo = self.weights_concatenated[:,300:400]
+		return
 
 class Softmax(object):
 
@@ -98,15 +104,17 @@ class Softmax(object):
 		self.error_derivatives_w = np.zeros(self.weights.shape)
 		# print type(self.weights)
 		self.steps = steps
+		self.t,self.cache = 0,0
 		self.out,self.delta_h = {},{}
 		return
 
 	def forward(self,activations_below):
 		
-		for t in range(self.steps):
-			self.out[t] = softmax(np.matmul(self.weights.T,activations_below[t])) 
+		self.out[self.t] = softmax(np.matmul(self.weights.T,activations_below)) 
 		self.activations_LSTM = activations_below
-		return self.out	
+		out = self.out[self.t]
+		self.t+=1
+		return out	
 
 	def backward(self,target):
 
@@ -117,7 +125,10 @@ class Softmax(object):
 
 		return self.delta_h
 
-	def update(self):
+	def update(self,learning_rate):
+		
 		#Adagrad update
-		pass
-		# return
+		self.cache += np.power(self.error_derivatives_w,2)
+		self.weights -= (learning_rate * self.error_derivatives_w)/np.sqrt(self.cache + 1e-7)
+	
+		return
