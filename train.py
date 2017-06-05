@@ -37,13 +37,13 @@ def train(data):
 
 	layer = LSTM(len_input,hidden_nodes,seq_length,h_init)
 	output = Softmax(len_input,hidden_nodes, seq_length)
-	cnt = 1
+	cnt,iters = 1,1
 
 	while True:
+		print "Epoch no", iters
+		
 		for i in range(0,len(data)-seq_length-1,seq_length):
 			
-			# if cnt>4:
-			# 	break
 			x,target = [],[]
 			for j,char in enumerate(data[i:i+seq_length]):
 				x = one_hot(char)
@@ -77,8 +77,12 @@ def train(data):
 
 			cnt+=1 #iteration counter 	
 
+		dump_parameters(layer.weights_concatenated,output.weights,iters)
+		iters+=1
+
 if __name__ == '__main__':
 	data = load_data()
+	print len(data)
 	unq_chars = list(set(data))
 	len_input = len(unq_chars)
 	train(data)
