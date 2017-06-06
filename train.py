@@ -21,7 +21,7 @@ def sample(x,len_text):
 	
 	layer.reset()
 	output.reset()
-	# print p
+	print p
 	return ixes
 
 
