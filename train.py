@@ -21,7 +21,7 @@ def sample(x,len_text):
 	
 	layer.reset()
 	output.reset()
-	print p
+	# print p
 	return ixes
 
 
@@ -77,7 +77,7 @@ def train(data):
 
 			cnt+=1 #iteration counter 	
 
-		dump_parameters(layer.weights_concatenated,output.weights,iters)
+		dump_parameters(layer.weights_concatenated,layer.bias_concatenated,output.weights,output.bias,iters)
 		iters+=1
 
 if __name__ == '__main__':

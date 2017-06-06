@@ -15,9 +15,9 @@ def load_data():
 	return characters
 
 
-def dump_parameters(lstm,softmax,iters):
+def dump_parameters(lstm_weights,lstm_bias,softmax_weights,softmax_bias,iters):
 
-	dict_ = {"lstm":lstm,"softmax":softmax}
+	dict_ = {"lstm_weights":lstm_weights,'lstm_bias':lstm_bias,"softmax_weights":softmax_weights,'softmax_bias':softmax_bias}
 	filename = os.path.join(save_path, 'parameters_'+str(iters)+'.pickle')
 	with open(filename, 'wb"') as output_file:
 		cPickle.dump(dict_, output_file)
