@@ -70,16 +70,16 @@ class LSTM(object):
 	def backward(self,d_above):
 		
 		dhnext = np.zeros_like(self.h[0])
-		dc = np.zeros_like(self.C[0])
+		dcnext = np.zeros_like(self.C[0])
 
 		for t in reversed(xrange(self.steps)):
 			dh = d_above[t] + dhnext
 			do = dh*sigmoid(self.C[t],'tanh')
-			dc += dh * self.o[t] * deriv_sigmoid(self.C[t],'tanh')
+			dc = dh * self.o[t] * deriv_sigmoid(self.C[t],'tanh') + dcnext
 			da = dc * self.i[t]
 			di = dc * self.a[t]
 			df = dc * self.C[t]
-			dc = dc * self.f[t]
+			dcnext += dc * self.f[t]
 			df_bar = df * deriv_sigmoid(self.f[t],'logit') 
 			di_bar = di * deriv_sigmoid(self.i[t],'logit') 
 			do_bar = do * deriv_sigmoid(self.o[t],'logit')
