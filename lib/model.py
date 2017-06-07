@@ -79,14 +79,14 @@ class LSTM(object):
 			da = dc * self.i[t]
 			di = dc * self.a[t]
 			df = dc * self.C[t]
-			dcnext += dc * self.f[t]
+			dcnext = dc * self.f[t]
 			df_bar = df * deriv_sigmoid(self.f[t],'logit') 
 			di_bar = di * deriv_sigmoid(self.i[t],'logit') 
 			do_bar = do * deriv_sigmoid(self.o[t],'logit')
 			da_bar = da * deriv_sigmoid(self.a_bar[t],'tanh')
 			dz = np.concatenate((da_bar,di_bar,df_bar,do_bar),axis = 0)
 			dinput = np.matmul(self.weights_concatenated,dz)
-			dhnext += dinput[self.len_vec:]
+			dhnext = dinput[self.len_vec:]
 			self.dweights += np.matmul(self.input_[t],dz.T)
 			self.dbias += dz 
 
