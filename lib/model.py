@@ -24,7 +24,7 @@ def deriv_sigmoid(val,non_linearity):
 		return (1 - np.power(np.tanh(val),2))
 
 class LSTM(object):
-	"""docstring for LSTM"""
+	
 	def __init__(self, len_vec, hidden_units, steps, h_init):
 		super(LSTM, self).__init__()
 		self.input_,self.a_bar,self.i,self.f,self.o,self.h,self.C,self.z = {},{},{},{},{},{},{},{}
@@ -89,14 +89,14 @@ class LSTM(object):
 			dhnext = dinput[self.len_vec:]
 			self.dweights += np.matmul(self.input_[t],dz.T)
 			self.dbias += dz 
+		for dparam in [self.dweights, self.dbias]:
+			np.clip(dparam, -5, 5, out=dparam)
 
-		# self.j = 0
 		return dh
 
 	def update(self,learning_rate):
 		#Adagrad update
-		# print (learning_rate * self.dweights)/np.sqrt(self.cache_weights + 1e-7)
-		# thaha = raw_input()
+
 		self.cache_weights += np.power(self.dweights,2)
 		self.cache_bias += np.power(self.dbias,2)
 		self.weights_concatenated -= (learning_rate * self.dweights)/np.sqrt(self.cache_weights + 1e-7)
@@ -137,8 +137,11 @@ class Softmax(object):
 			self.error_derivatives_w += np.matmul(self.activations_LSTM[t],error_derivatives_ISM.T)
 			self.error_derivatives_b += error_derivatives_ISM
 			self.delta_h[t] = np.matmul(self.weights,error_derivatives_ISM)
+		
+		for dparam in [self.error_derivatives_w, self.error_derivatives_w]:
+			np.clip(dparam, -5, 5, out=dparam)
 
-		# self.t = 0
+
 		return self.delta_h
 
 	def update(self,learning_rate):

@@ -8,11 +8,10 @@ save_path = os.path.join(path, 'network_parameters')
 
 def load_data():
 	characters = []
-	with open(data_file,'rb') as f:
-		for line in f.readlines():
-			characters.extend([i for i in line])
+	# with open(data_file,'rb') as f:
+	data = open(data_file, 'r').read()
 
-	return characters
+	return data
 
 
 def dump_parameters(lstm_weights,lstm_bias,softmax_weights,softmax_bias,iters):
@@ -25,5 +24,13 @@ def dump_parameters(lstm_weights,lstm_bias,softmax_weights,softmax_bias,iters):
 
 	return
 
+def load_model(file):
+
+	filename = os.path.join(save_path,file)
+	with open(filename,"rb") as f:
+		parameters = cPickle.load(f)
+
+	return parameters
+	
 if __name__ == '__main__':
 	char = load_data()

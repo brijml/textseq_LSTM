@@ -1,6 +1,7 @@
 import numpy as np
 from lib import *
 import sys
+import matplotlib.pyplot as plt
 
 def one_hot(char):
 	vector = np.zeros((len_input,1))
@@ -21,11 +22,11 @@ def sample(x,len_text):
 	
 	layer.reset()
 	output.reset()
-	# print p
+	
 	return ixes
 
 
-def train(data):
+def train(data,load_pretrained = False):
 	global layer,output
 	#hyperparameters
 	learning_rate = 1e-5
@@ -37,8 +38,21 @@ def train(data):
 
 	layer = LSTM(len_input,hidden_nodes,seq_length,h_init)
 	output = Softmax(len_input,hidden_nodes, seq_length)
-	cnt,iters = 1,1
+	
+	if load_pretrained:
+		parameters = load_model("parameters_5.pickle")
+		layer.weights_concatenated = parameters['lstm_weights']
+		layer.bias_concatenated = parameters['lstm_bias']
+		layer.Wc, layer.bc = layer.weights_concatenated[:,0:100], layer.bias_concatenated[0:100]
+		layer.Wf, layer.bf = layer.weights_concatenated[:,100:200], layer.bias_concatenated[100:200]
+		layer.Wi, layer.bi = layer.weights_concatenated[:,200:300], layer.bias_concatenated[200:300]
+		layer.Wo, layer.bo = layer.weights_concatenated[:,300:400], layer.bias_concatenated[300:400]
+		output.weights = parameters['softmax_weights']
+		output.bias = parameters['softmax_bias']
 
+	cnt,iters = 1,6
+	error,val = [],[]
+	
 	while True:
 		print "Epoch no", iters
 		
@@ -65,9 +79,8 @@ def train(data):
 			output.reset()
 
 			#Sample text every now and then to see what lstm is learning
-			if cnt%1000 == 0:
-				# print sys.getsizeof(layer),sys.getsizeof(output)
-				# print len(layer.h.keys())
+			if cnt%100 == 0:
+
 				indices = sample(data[0],200)
 				text = ""
 				for idx in indices:
@@ -85,4 +98,4 @@ if __name__ == '__main__':
 	print len(data)
 	unq_chars = list(set(data))
 	len_input = len(unq_chars)
-	train(data)
+	train(data,load_pretrained = True)
