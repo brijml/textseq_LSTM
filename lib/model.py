@@ -23,6 +23,61 @@ def deriv_sigmoid(val,non_linearity):
 	if non_linearity == 'tanh':
 		return (1 - np.power(np.tanh(val),2))
 
+class RNN(object):
+	
+	def __init__(self, len_vec, hidden_units, steps, h_init):
+		super(RNN, self).__init__()
+		self.h,self.input_ = {},{}
+		self.h[-1] = h_init
+		self.Wxh = initialise_parameters(len_vec,hidden_units)[0]
+		self.Whh,self.bh = initialise_parameters(hidden_units,hidden_units)
+		self.steps = steps
+		self.dWxh = np.zeros_like(self.Wxh)
+		self.dWhh = np.zeros_like(self.Whh)
+		self.dbh = np.zeros_like(self.bh)
+		self.j = 0
+		return
+
+	def forward(self,x):
+
+		#Equations for a single time step of RNN
+		self.input_[self.j] = x
+		self.h[self.j] = sigmoid(np.matmul(self.Whh.T,self.h[self.j-1]) + np.matmul(self.Wxh.T,x) + self.bh,'tanh')
+		out = self.h[self.j]
+		self.h[-1] = self.h[self.j]
+		self.j+=1
+		return out
+
+	def backward(self,d_above):
+		
+		dhnext = np.zeros_like(self.h[0])
+
+		for t in reversed(xrange(self.steps)):
+			dh = d_above[t] + dhnext
+			dhraw = (1 - self.h[t]*self.h[t]) * dh
+			# print dhraw.shape,self.input_[t].shape
+			self.dbh += dhraw
+			self.dWxh += np.matmul(self.input_[t], dhraw.T)
+			self.dWhh += np.dot(dhraw, self.h[t-1].T)
+			dhnext = np.dot(self.Whh.T, dhraw)		
+
+		for dparam in [self.dWxh,self.dWhh,self.dbh]:
+			np.clip(dparam, -5, 5, out=dparam)
+
+		return dh
+
+	def update(self,learning_rate):
+		#Adagrad update
+
+		self.Wxh -= (learning_rate * self.dWxh)
+		self.Whh -= (learning_rate * self.dWhh)
+		self.bh -= (learning_rate * self.dbh)
+		return
+	
+	def reset(self):
+		self.j = 0
+		return
+
 class LSTM(object):
 	
 	def __init__(self, len_vec, hidden_units, steps, h_init):
